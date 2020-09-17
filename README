@@ -1,0 +1,2 @@
+### Generate stubs
+protoc --proto_path=./apidoc/grpc/proto --go_out=plugins=grpc:./apidoc/grpc/gen --go_opt=paths=source_relative ./apidoc/grpc/proto/*.proto
