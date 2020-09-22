@@ -5,16 +5,21 @@ import (
 	"WalletPOC/internal/core/application"
 	"WalletPOC/internal/infrastructure/persistance/inmemory"
 	grpchandler "WalletPOC/internal/interfaces/grpc"
-	"fmt"
+	"WalletPOC/internal/interfaces/grpc/auth"
+	"WalletPOC/pkg/brontide"
+	"github.com/btcsuite/btcutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
-	"net"
 )
+
+const wif = "L4Aak5BJfaMemneuNR11DSQfnRLeVsMzRYx6JiqbyjY74ej3V7kV"
 
 func main() {
 
-	walletGrpcServer := grpc.NewServer()
+	serverCreds := auth.NewNoiseCredentials()
+	serverOpts := []grpc.ServerOption{grpc.Creds(serverCreds)}
+	walletGrpcServer := grpc.NewServer(serverOpts...)
 
 	inMemoryWalletRepository := inmemory.NewWalletRepositoryImpl()
 	walletSvc := application.NewWalletService(inMemoryWalletRepository)
@@ -22,14 +27,20 @@ func main() {
 
 	pbwallet.RegisterWalletServer(walletGrpcServer, walletHandler)
 
-	listen, err := net.Listen("tcp", ":3333")
+	wifDecoded, err := btcutil.DecodeWIF(wif)
 	if err != nil {
-		fmt.Printf("failed to listen: %v\n", err)
-		return
+		log.Fatal(err)
+	}
+	localPriv := wifDecoded.PrivKey
+	localKeyECDH := &brontide.PrivKeyECDH{PrivKey: localPriv}
+
+	listener, err := brontide.NewListener(localKeyECDH, ":3333")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	reflection.Register(walletGrpcServer)
-	err = walletGrpcServer.Serve(listen)
+	err = walletGrpcServer.Serve(listener)
 	if err != nil {
 		log.Fatal(err)
 	}
