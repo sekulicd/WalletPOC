@@ -1,15 +1,16 @@
 package main
 
 import (
+	wallet "WalletPOC/apidoc/grpc/gen"
 	"WalletPOC/pkg/brontide"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"net"
+	"google.golang.org/grpc"
 	"testing"
 )
 
@@ -40,42 +41,33 @@ func TestPrivKey(t *testing.T) {
 func TestConnection(t *testing.T) {
 	wifDecoded, err := btcutil.DecodeWIF(wif)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	localPriv := wifDecoded.PrivKey
-
-	//localPriv, err := btcec.NewPrivateKey(btcec.S256())
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
 
 	remotePriv, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		t.Fatal(err)
 	}
-	remoteKeyECDH := &brontide.PrivKeyECDH{PrivKey: remotePriv}
 
-	addr, err := net.ResolveTCPAddr("tcp", ":3333")
+	credentials, err := brontide.NewClientCredentials(
+		remotePriv,
+		localPriv.PubKey(),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	netAddr := &brontide.NetAddress{
-		IdentityKey: localPriv.PubKey(),
-		Address:     addr,
-	}
-
-	remoteConn, err := brontide.Dial(remoteKeyECDH, netAddr, net.Dial)
+	conn, err := grpc.Dial(":3333", grpc.WithTransportCredentials(credentials))
 	if err != nil {
 		t.Fatal(err)
 	}
+	client := wallet.NewWalletClient(conn)
+	seed, err := client.GenSeed(context.Background(), &wallet.GenSeedRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(seed.SeedMnemonic)
 
-	//conn, err := grpc.Dial(":3333", grpc.WithInsecure())
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//defer conn.Close()
-	//wallet.NewWalletClient(conn)
-
-	defer remoteConn.Close()
+	defer conn.Close()
 }

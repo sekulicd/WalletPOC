@@ -5,7 +5,6 @@ import (
 	"WalletPOC/internal/core/application"
 	"WalletPOC/internal/infrastructure/persistance/inmemory"
 	grpchandler "WalletPOC/internal/interfaces/grpc"
-	"WalletPOC/internal/interfaces/grpc/auth"
 	"WalletPOC/pkg/brontide"
 	"github.com/btcsuite/btcutil"
 	"google.golang.org/grpc"
@@ -17,9 +16,11 @@ const wif = "L4Aak5BJfaMemneuNR11DSQfnRLeVsMzRYx6JiqbyjY74ej3V7kV"
 
 func main() {
 
-	serverCreds := auth.NewNoiseCredentials()
-	serverOpts := []grpc.ServerOption{grpc.Creds(serverCreds)}
-	walletGrpcServer := grpc.NewServer(serverOpts...)
+	//serverCreds := auth.NewNoiseCredentials()
+	//serverOpts := []grpc.ServerOption{grpc.Creds(serverCreds)}
+	//walletGrpcServer := grpc.NewServer(serverOpts...)
+
+	walletGrpcServer := grpc.NewServer()
 
 	inMemoryWalletRepository := inmemory.NewWalletRepositoryImpl()
 	walletSvc := application.NewWalletService(inMemoryWalletRepository)
